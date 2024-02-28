@@ -125,19 +125,15 @@ public:
     }
 
     SingleLinkedList(std::initializer_list<Type> values) {
-        copyList(this, values.begin(), values.end(), values.size());     
+        CopyList(this, values.begin(), values.end());     
     }
 
     SingleLinkedList(const SingleLinkedList& other) {
         if(size_ == 0 && head_.next_node == nullptr){
-            SingleLinkedList tmp;
-            try{
-                 copyList(this, other.begin(), other.end(), tmp.size_);
-            }catch(...){
-                throw;
-            }
+			CopyList(this, other.begin(), other.end());
         }
     }
+	
     SingleLinkedList& operator=(const SingleLinkedList& rhs) {
         if(this != &rhs){
             SingleLinkedList tmp(rhs);
@@ -148,24 +144,12 @@ public:
 
    
     void swap(SingleLinkedList& other) noexcept {
-        Node* node_tmp = other.head_.next_node;
-        size_t size_tmp = other.size_;
-        
-        other.head_.next_node = head_.next_node;
-        other.size_ = size_;
-
-        head_.next_node = node_tmp;
-        size_ = size_tmp;
-
+		std::swap(head_.next_node, other.head_.next_node);
+		std::swap(size_, other.size_);
     }
     
     void PushFront(const Type& value){
-        Node* node;
-        if(IsEmpty()){
-            node = new Node(value, nullptr);
-        }else{
-            node = new Node(value, head_.next_node);
-        }
+        Node* node = new Node(value, head_.next_node);
         head_.next_node = node;
         size_++;
     }
@@ -186,7 +170,7 @@ public:
 
     // Сообщает, пустой ли список
     [[nodiscard]] bool IsEmpty() const noexcept {
-        return (size_ == 0 ? true:false);
+        return size_ == 0;
     }
 
     using value_type = Type;
@@ -267,10 +251,7 @@ public:
     }
 
     void PopFront() noexcept {
-        Node* node =  head_.next_node;
-        head_.next_node = node->next_node;
-        delete(node);
-        size_--;
+		RemoveNode(&head_);
     }
 
     /*
@@ -278,17 +259,14 @@ public:
      * Возвращает итератор на элемент, следующий за удалённым
      */
     Iterator EraseAfter(ConstIterator pos) noexcept {
-        Node* node_to_delete  =  pos.node_->next_node;
-        pos.node_->next_node = node_to_delete ->next_node;
-        --size_;
-        delete (node_to_delete);
+		RemoveNode(pos.node_);
         return Iterator(pos.node_->next_node);
     }
 
     private:
 
 	template <typename It>
-    void copyList(SingleLinkedList* list, It begin, It end, size_t new_size){
+    void CopyList(SingleLinkedList* list, It begin, It end){
         SingleLinkedList tmp;
         for(auto i = begin; i != end; i++){
             tmp.PushFront(*i);
@@ -296,8 +274,15 @@ public:
         for(auto i = tmp.begin(); i != tmp.end(); i++){
             list->PushFront(*i);
         }
-		list->size_ = new_size;
+		list->size_ = static_cast<size_t>(std::distance(begin, end));
     }
+
+	void RemoveNode(Node* prev_node) noexcept{
+		Node* node_to_delete =  prev_node->next_node;
+        prev_node->next_node = node_to_delete->next_node;
+		delete (node_to_delete);
+		--size_;
+	}
 	
     // Фиктивный узел, используется для вставки "перед первым элементом"
     Node head_;
@@ -326,16 +311,16 @@ bool operator<(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& 
 
 template <typename Type>
 bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return !(&rhs < &lhs);
+    return !(rhs < lhs);
 }
 
 template <typename Type>
 bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return &lhs < &rhs;
+    return rhs < lhs;
 }
 
 template <typename Type>
 bool operator>=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return !(&lhs > &rhs);
-} 
+    return !(lhs < rhs);
+}  
 
